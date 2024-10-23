@@ -1,0 +1,210 @@
+#Veggie Garden Irrigation Schedule
+- alias: "Veggie Garden Irrigation Schedule"
+  trigger:
+    - platform: time
+      at: "10:00:00" #1st irrigation time
+    - platform: time
+      at: "11:30:00" #2nd irrigation time
+    - platform: time
+      at: "12:30:00" #3rd irrigation time
+    - platform: time
+      at: "14:00:00" #4th irrigation time
+  condition:
+    - condition: numeric_state
+      entity_id: sensor.soil_moisture_analog
+      below: 30
+  variables:
+    t1: 60 #Number of seconds for row 1
+    t2: 60 #Number of seconds for row 2
+    t3: 60 #Number of seconds for row 3
+    t4: 60 #Number of seconds for row 4
+  action:
+    # Close latch valve
+    - service: mqtt.publish
+      data:
+        topic: "home/latch_command"
+        payload: "close"
+    #Run Veggie OS valves
+    - service: mqtt.publish
+      data:
+        topic: "OS-garden"
+        payload: >-
+          cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid=0&t={{t1}}&en=1
+    - delay:
+        seconds: 1
+    - service: mqtt.publish
+      data:
+        topic: "OS-garden"
+        payload: >-
+          cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid=1&t={{t2}}&en=1
+    - delay:
+        seconds: 1
+    - service: mqtt.publish
+      data:
+        topic: "OS-garden"
+        payload: >-
+          cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid=2&t={{t3}}&en=1
+    - delay:
+        seconds: 1
+    - service: mqtt.publish
+      data:
+        topic: "OS-garden"
+        payload: >-
+          cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid=3&t={{t4}}&en=1
+    #Delay latch close for total duration
+    - delay:
+        seconds: "{{t1 + t2 + t3 + t4 - 3}}"
+    # Open latch valve
+    - service: mqtt.publish
+      data:
+        topic: "home/latch_command"
+        payload: "open"
+
+#Daily Soil Monitoring
+- alias: "Daily Soil Readings"
+  trigger:
+    - platform: time_pattern
+      minutes: 10 #mins after the hour to take reading
+  condition:
+    - condition: time
+      after: "07:00"
+      before: "18:00"
+  action:
+    - service: mqtt.publish
+      data:
+        topic: "home/soil_moisture/take_reading"
+        payload: "READ"
+        
+#Nursery Schedule
+#- alias: "Nursery Irrigation Schedule"
+ # trigger:
+ #   - platform: time
+  #    at: "10:30:00" #1st irrigation time
+  #  - platform: time
+  #    at: "12:00:00" #2nd irrigation time
+  #condition:
+  #  - condition: numeric_state
+  #    entity_id: sensor.soil_moisture_analog
+  #    below: 30
+  #variables:
+  #  n1: 60 #Number of seconds for Nursery Irrigations
+  #action:
+    # Close latch valve
+   # - service: mqtt.publish
+    #  data:
+     #   topic: "home/latch_command"
+     #   payload: "close"
+   # #Run Nursery OS valve
+   # - service: mqtt.publish
+    #  data:
+    #    topic: "OS-garden"
+    #    payload: >-
+    #      cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid=4&t={{n1}}&en=1
+    # Open latch valve
+   # - service: mqtt.publish
+    #  data:
+    #    topic: "home/latch_command"
+     #   payload: "open"
+
+#Daily Soil Monitoring
+- alias: "Daily Soil Readings"
+  trigger:
+    - platform: time_pattern
+      minutes: 10 #mins after the hour to take reading
+  condition:
+    - condition: time
+      after: "07:00"
+      before: "18:00"
+  action:
+    - service: mqtt.publish
+      data:
+        topic: "home/soil_moisture/take_reading"
+        payload: "READ"
+
+
+# Manually Triggered Soil Reading
+- alias: "Trigger Soil Sensor Reading"
+  trigger:
+    - platform: state
+      entity_id: input_button.soil_moisture_trigger
+  action:
+    - service: mqtt.publish
+      data:
+        topic: "home/soil_moisture/take_reading"
+        payload: "READ"
+        
+# Update Time Soil Last Read
+- alias: "Update Soil Moisture Last Read Time"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.soil_moisture_digital
+    - platform: state
+      entity_id: sensor.soil_moisture_analog
+  action:
+    - service: homeassistant.update_entity
+      target:
+        entity_id: sensor.soil_moisture_last_updated
+
+
+#Auto Update Irrigation Zones Running Status
+- alias: Update Zone Status
+  trigger:
+    - platform: mqtt
+      topic: opensprinkler/station/+ #listen for messages related to all stations
+  variables:
+    zone_id: "{{ trigger.topic.split('/')[-1] | int + 1}}" #extract zone index from mqtt message
+    zone_status: "input_text.zone_{{ zone_id }}_status" #variable to store zone current status
+    last_run: "input_datetime.zone_{{ zone_id }}_last_run" #date and time of last run variable
+    last_duration: "input_text.zone_{{ zone_id }}_last_duration" #duration of last run variable
+    
+  action:
+    - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.payload_json.state == 1 }}" #mqtt message = zone currently running
+        sequence:
+          - service: logbook.log
+            data:
+              name: "Irrigation message received"
+              message: "start: zone {{ zone_id }} duration {{ trigger.payload_json.duration }}s"
+        #set zone status
+          - service: input_text.set_value
+            target:
+              entity_id: "{{ zone_status }}"
+            data:
+              value: "active"
+          - service: logbook.log
+            data:
+              name: "Zone status change"
+              message: "zone_status_{{ zone_id }} should now be active"
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.payload_json.state == 0 }}" #mqtt message = zone finished running
+        sequence:
+          - service: logbook.log
+            data:
+              name: "Irrigation message received"
+              message: "stopped: zone {{ zone_id }} duration {{ trigger.payload_json.duration }}s"
+        #set datetime
+          - service: input_datetime.set_datetime
+            target:
+              entity_id: "{{ last_run }}"
+            data:
+              datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}" #store current time&date
+        #set duration
+          - service: input_text.set_value
+            target:
+              entity_id: "{{ last_duration }}"
+            data:
+              value: "{{ (trigger.payload_json.duration | float / 60) | round(1) }}" #extract duration from mqtt message convert to minutes (1 dec place)
+        #set zone status
+          - service: input_text.set_value
+            target:
+              entity_id: "{{ zone_status }}"
+            data:
+              value: "idle"
+          - service: logbook.log
+            data:
+              name: "Zone status change"
+              message: "zone_status_{{ zone_id }} should now be idle"
+               

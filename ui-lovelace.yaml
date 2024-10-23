@@ -1,0 +1,233 @@
+title: Irrigation Control
+views:
+  - title: Garden Irrigation
+    path: irrigation
+    cards:
+      - type: weather-forecast
+        entity: weather.forecast_home
+        forecast_type: hourly
+        show_forecast: true
+        show_current: false
+        card_mod:
+          style: |
+            ha-card {
+              width: 100%;
+              margin: 0 auto;
+            }
+      - type: vertical-stack
+        cards:
+          - type: horizontal-stack
+            cards:
+              - type: markdown
+                content: >
+                  {% set moisture = states('sensor.soil_moisture_analog') %} {%
+                  set last_updated =
+                  states.sensor.soil_moisture_analog.last_updated %} {% if
+                  moisture != 'unknown' and moisture is not none %}
+                    Soil moisture is currently **{{ moisture }}%**. Last updated at
+                    {{ as_timestamp(last_updated) | timestamp_custom('%I:%M %p on %a %b %d', true) }}.
+                  {% else %}
+                    Soil moisture data not available.
+                  {% endif %}
+              - type: button
+                entity: input_button.soil_moisture_trigger
+                name: Take Soil Reading
+                tap_action:
+                  action: call-service
+                  service: input_button.press
+                  service_data:
+                    entity_id: input_button.soil_moisture_trigger
+          - type: history-graph
+            entities:
+              - entity: sensor.soil_moisture_analog
+            title: Soil Moisture Levels
+            hours_to_show: 12
+            refresh_interval: 1
+      - type: weather-forecast
+        entity: weather.forecast_home
+        forecast_type: daily
+        show_forecast: true
+        show_current: false
+        card_mod:
+          style: |
+            ha-card {
+              width: 100%;
+              margin: 0 auto;
+            }
+      - type: custom:horizon-card
+        card_mod:
+          style: |
+            ha-card {
+              width: 100%;
+              max-width: 100%;
+              margin: 0 auto;
+            }
+      - type: vertical-stack
+        cards:
+          - type: horizontal-stack
+            cards:
+              - type: markdown
+                content: |
+                  {% if states('input_text.zone_1_status') == 'active' %}
+                    Row 1 <font color="green">Active Now!</font>
+                  {% else %}
+                    Row 1 last ran {{
+                      as_timestamp(states('input_datetime.zone_1_last_run')) |
+                      timestamp_custom('%I:%M %p, %A, %d %b', true)
+                    }} for {{
+                      states('input_text.zone_1_last_duration')
+                    }} mins
+                  {% endif %}
+              - type: custom:numberbox-card
+                entity: input_number.runtime_row1
+                name: null
+                border: true
+                min: 1
+                max: 4
+                step: 0.5
+                unit: min
+                style:
+                  card:
+                    height: 100%
+              - type: button
+                name: Run Row 1
+                tap_action:
+                  action: call-service
+                  service: script.run_zone
+                  service_data:
+                    sid: 0
+                    input_runtime: input_number.runtime_row1
+          - type: horizontal-stack
+            cards:
+              - type: markdown
+                content: |
+                  {% if states('input_text.zone_2_status') == 'active' %}
+                    Row 2 <font color="green">Active Now!</font>
+                  {% else %}
+                    Row 2 last ran {{
+                      as_timestamp(states('input_datetime.zone_2_last_run')) |
+                      timestamp_custom('%I:%M %p, %A, %d %b', true)
+                    }} for {{
+                      states('input_text.zone_2_last_duration')
+                    }} mins
+                  {% endif %}
+              - type: custom:numberbox-card
+                entity: input_number.runtime_row2
+                name: null
+                border: true
+                min: 1
+                max: 4
+                step: 0.5
+                unit: min
+                style:
+                  card:
+                    width: 100%
+              - type: button
+                name: Run Row 2
+                tap_action:
+                  action: call-service
+                  service: script.run_zone
+                  service_data:
+                    sid: 1
+                    input_runtime: input_number.runtime_row2
+          - type: horizontal-stack
+            cards:
+              - type: markdown
+                content: |
+                  {% if states('input_text.zone_3_status') == 'active' %}
+                     Row 3 <font color="green">Active Now!</font>
+                   {% else %}
+                     Row 3 last ran {{
+                       as_timestamp(states('input_datetime.zone_3_last_run')) |
+                       timestamp_custom('%I:%M %p, %A, %d %b', true)
+                     }} for {{
+                       states('input_text.zone_3_last_duration')
+                     }} mins
+                   {% endif %}
+              - type: custom:numberbox-card
+                entity: input_number.runtime_row3
+                name: null
+                border: true
+                min: 1
+                max: 4
+                step: 0.5
+                unit: min
+              - type: button
+                name: Run Row 3
+                tap_action:
+                  action: call-service
+                  service: script.run_zone
+                  service_data:
+                    sid: 2
+                    input_runtime: input_number.runtime_row3
+          - type: horizontal-stack
+            cards:
+              - type: markdown
+                content: |
+                  {% if states('input_text.zone_4_status') == 'active' %}
+                    Row 4 <font color="green">Active Now!</font>
+                  {% else %}
+                    Row 4 last ran {{
+                      as_timestamp(states('input_datetime.zone_4_last_run')) |
+                      timestamp_custom('%I:%M %p, %A, %d %b', true)
+                    }} for {{
+                      states('input_text.zone_4_last_duration')
+                    }} mins
+                  {% endif %}
+              - type: custom:numberbox-card
+                entity: input_number.runtime_row4
+                name: null
+                border: true
+                min: 1
+                max: 4
+                step: 0.5
+                unit: min
+              - type: button
+                name: Run Row 4
+                tap_action:
+                  action: call-service
+                  service: script.run_zone
+                  service_data:
+                    sid: 3
+                    input_runtime: input_number.runtime_row4
+          - type: horizontal-stack
+            cards:
+              - type: markdown
+                content: |
+                  {% if states('input_text.zone_5_status') == 'active' %}
+                    Nursery <font color="green">Active Now!</font>
+                  {% else %}
+                    Nursery last ran {{
+                      as_timestamp(states('input_datetime.zone_5_last_run')) |
+                      timestamp_custom('%I:%M %p, %A, %d %b', true)
+                    }} for {{
+                      states('input_text.zone_5_last_duration')
+                    }} mins
+                  {% endif %}
+              - type: custom:numberbox-card
+                entity: input_number.runtime_nursery
+                name: null
+                border: true
+                min: 1
+                max: 4
+                step: 0.5
+              - type: button
+                name: Run Nursery
+                tap_action:
+                  action: call-service
+                  service: script.run_zone
+                  service_data:
+                    sid: 4
+                    input_runtime: input_number.runtime_nursery
+          - type: horizontal-stack
+            cards:
+              - type: button
+                name: Run All Zones
+                tap_action:
+                  action: call-service
+                  service: script.run_all_zones
+      - type: entities
+        entities:
+          - entity: switch.latch_valve
+            name: Latch Valve
+

@@ -1,0 +1,148 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+#themes: !include_dir_merge_named themes
+automation: !include automations.yaml
+script: !include scripts.yaml
+#sensor: !include sensors.yaml
+#binary_sensor: !include binary_sensors.yaml
+scene: !include scenes.yaml
+
+lovelace:
+  mode: yaml
+  resources:
+    - url: /local/community/numberbox-card/numberbox-card.js
+      type: module
+    - url: /local/community/lovelace-horizon-card/lovelace-horizon-card.js
+      type: module
+    - url: /local/community/lovelace-card-mod/card-mod.js
+      type: module
+#read soil moisture button
+input_button:
+  soil_moisture_trigger:
+    name: "Take Soil Reading"
+    
+#sensors
+mqtt:
+  sensor:
+    - name: "soil_moisture_analog"
+      state_topic: "home/soil_moisture/analog"
+      unit_of_measurement: "%"
+      value_template: "{{ (value | int / 65535 * 100) | round(2) }}"
+  binary_sensor:
+    - name: "soil_moisture_digital"
+      state_topic: "home/soil_moisture/digital"
+      payload_on: "0"  # wet
+      payload_off: "1"  # dry
+      value_template: "{{ value }}"
+  #latch switch
+  switch:
+      name: "latch_valve"
+      state_topic: "latch/latch_action"  # Pico publishesed state ('open' or 'close')
+      command_topic: "home/latch_command"  # command sent to the Pico
+      payload_on: "open"
+      payload_off: "close"
+      state_on: "open"
+      state_off: "close"
+      qos: 0
+      retain: false
+      
+template:
+  - sensor:
+      - name: "soil_moisture_last_updated"
+        state: "{{ states.sensor.soil_moisture_analog.last_updated }}"
+        availability: "{{ states('sensor.soil_moisture_analog')  }}"
+        unique_id: "soil_moisture_last_updated"
+        attributes:
+          last_read: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+  
+
+          
+input_datetime:
+  #Zone last run zone variables (stores both date and time)
+  zone_1_last_run:
+    name: "zone_1_last_run"
+    has_date: true
+    has_time: true
+  zone_2_last_run:
+    name: "zone_2_last_run"
+    has_date: true
+    has_time: true
+  zone_3_last_run:
+    name: "zone_3_last_run"
+    has_date: true
+    has_time: true
+  zone_4_last_run:
+    name: "zone_4_last_run"
+    has_date: true
+    has_time: true
+  zone_5_last_run:
+    name: "zone_5_last_run"
+    has_date: true
+    has_time: true
+    
+input_text:
+  #Zone Status variables
+  zone_1_status:
+    name: "zone_1_status"
+  zone_2_status:
+    name: "zone_2_status"
+  zone_3_status:
+    name: "zone_3_status"
+  zone_4_status:
+    name: "zone_4_status"
+  zone_5_status:
+    name: "zone_5_status"
+  
+    
+  #Duration of last run variables
+  zone_1_last_duration:
+    name: "zone_1_last_duration"
+  zone_2_last_duration:
+    name: "zone_2_last_duration"
+  zone_3_last_duration:
+    name: "zone_3_last_duration"
+  zone_4_last_duration:
+    name: "zone_4_last_duration"
+  zone_5_last_duration:
+    name: "zone_5_last_duration"
+    
+#User inputs
+input_number:
+  runtime_row1:
+    name: "Row1 Duration"
+    initial: 1
+    min: 1
+    max: 4
+    step: 0.5
+    mode: box
+  runtime_row2:
+    name: "Row2 Duration"
+    initial: 1
+    min: 1
+    max: 4
+    step: 0.5
+    mode: box
+  runtime_row3:
+    name: "Row3 Duration"
+    initial: 1
+    min: 1
+    max: 4
+    step: 0.5
+    mode: box
+  runtime_row4:
+    name: "Row4 Duration"
+    initial: 1
+    min: 1
+    max: 4
+    step: 0.5
+    mode: box
+  runtime_nursery:
+    name: "Nursery Duration"
+    initial: 1
+    min: 1
+    max: 4
+    step: 0.5
+    mode: box

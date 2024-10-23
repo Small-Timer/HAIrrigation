@@ -1,0 +1,95 @@
+run_zone:
+    alias: "Run Zone"
+    sequence:
+      - variables:
+          os_topic: "OS-garden"
+          os_payload: >-
+              cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid={{ sid }}&t={{ (states(input_runtime) | int(default=1) * 60) }}&en=1
+          latch_topic: "home/latch_command"
+          
+      # Close latch valve
+      - service: mqtt.publish
+        data:
+          topic: "{{ latch_topic }}"
+          payload: "close"
+      
+      # Run OS valve
+      - service: mqtt.publish
+        data:
+          topic: "{{ os_topic }}"
+          payload: "{{ os_payload }}"
+          
+      - delay:
+          seconds: "{{ (states('input_runtime') | float(default=1) * 60) | int }}"
+          
+      # Open latch valve
+      - service: mqtt.publish
+        data:
+          topic: "{{ latch_topic }}"
+          payload: "open"
+          
+run_all_zones:
+  alias: "Run All Zones"
+  sequence:
+    - variables:
+        latch_topic: "home/latch_command"
+        os_topic: "OS-garden"
+        # Calculate the total runtime in seconds (sum of all input runtimes)
+        total_runtime: >-
+          {{ (states('input_number.runtime_row1') | float(1) +
+              states('input_number.runtime_row2') | float(1) +
+              states('input_number.runtime_row3') | float(1) +
+              states('input_number.runtime_row4') | float(1) +
+              states('input_number.runtime_nursery') | float(1)) * 60 }}
+    
+    # Close latch valve
+    - service: mqtt.publish
+      data:
+        topic: "{{ latch_topic }}"
+        payload: "close"
+
+    # Run each OS valve
+    - service: mqtt.publish
+      data:
+        topic: "{{ os_topic }}"
+        payload: >-
+          cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid=0&t={{ (states('input_number.runtime_row1') | float(1) * 60) }}&en=1
+    - delay:
+        seconds: "1"
+    - service: mqtt.publish
+      data:
+        topic: "{{ os_topic }}"
+        payload: >-
+          cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid=1&t={{ (states('input_number.runtime_row2') | float(1) * 60) }}&en=1
+    - delay:
+        seconds: "1"
+    - service: mqtt.publish
+      data:
+        topic: "{{ os_topic }}"
+        payload: >-
+          cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid=2&t={{ (states('input_number.runtime_row3') | float(1) * 60) }}&en=1
+    - delay:
+        seconds: "1"
+    - service: mqtt.publish
+      data:
+        topic: "{{ os_topic }}"
+        payload: >-
+          cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid=3&t={{ (states('input_number.runtime_row4') | float(1) * 60) }}&en=1
+    - delay:
+        seconds: "1"
+    - service: mqtt.publish
+      data:
+        topic: "{{ os_topic }}"
+        payload: >-
+          cm?pw=56ce0aca15c43a49af2dcc704b1186fb&sid=4&t={{ (states('input_number.runtime_nursery') | float(1) * 60) }}&en=1
+
+    # Delay for total runtime
+    - delay:
+        seconds: "{{ total_runtime - 5 | int }}"
+
+    # Open latch valve
+    - service: mqtt.publish
+      data:
+        topic: "{{ latch_topic }}"
+        payload: "open"
+          
